@@ -440,5 +440,137 @@
   </div>
 
   <script src="script.js"></script>
+
+  <!-- =============================================
+       FACEBOOK IN-APP BROWSER FIX
+       Prevents website from going blank when
+       Messenger buttons are clicked inside FBIAB
+  ============================================== -->
+  <style>
+    #fbiab-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #1877f2, #0a5dc2);
+      color: #fff;
+      padding: 14px 16px;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+      animation: slideUpBanner 0.4s ease;
+    }
+    @keyframes slideUpBanner {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    #fbiab-banner .fbiab-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      line-height: 1.4;
+    }
+    #fbiab-banner .fbiab-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    #fbiab-banner .fbiab-open-btn {
+      background: #fff;
+      color: #1877f2;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #fbiab-banner .fbiab-close-btn {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+
+  <script>
+  (function () {
+    // ── 1. Detect Facebook In-App Browser ──────────────────
+    function isFBInAppBrowser() {
+      var ua = navigator.userAgent || '';
+      return /FBAN|FBAV|FB_IAB|FBIOS|FB4A|FBDV|FBSN|FBBV|FBCR|FBSS/.test(ua);
+    }
+
+    if (!isFBInAppBrowser()) return; // Not in FBIAB, do nothing
+
+    // ── 2. Show "Open in Chrome" banner ────────────────────
+    var banner = document.createElement('div');
+    banner.id = 'fbiab-banner';
+    banner.innerHTML =
+      '<div class="fbiab-text">' +
+        '<span class="fbiab-icon">⚠️</span>' +
+        '<span><strong>Para hindi mag-blank ang page:</strong><br>I-open sa Chrome browser para maayos ang lahat ng buttons.</span>' +
+      '</div>' +
+      '<button class="fbiab-open-btn" id="fbiabOpenBtn">Open sa Chrome</button>' +
+      '<button class="fbiab-close-btn" id="fbiabCloseBtn">✕</button>';
+
+    document.body.appendChild(banner);
+
+    // Close button
+    document.getElementById('fbiabCloseBtn').addEventListener('click', function () {
+      banner.style.display = 'none';
+    });
+
+    // "Open in Chrome" button — triggers the browser to open externally
+    document.getElementById('fbiabOpenBtn').addEventListener('click', function () {
+      var currentUrl = window.location.href;
+      // Android: intent scheme forces Chrome
+      var intentUrl = 'intent://' + currentUrl.replace(/^https?:\/\//, '') +
+        '#Intent;scheme=https;package=com.android.chrome;end';
+      // Try Android intent first, fallback to direct URL
+      try {
+        window.location.href = intentUrl;
+      } catch (e) {
+        window.open(currentUrl, '_system');
+      }
+    });
+
+    // ── 3. Override m.me clicks to use window.open() ───────
+    // This attempts to open Messenger in a new window instead of
+    // navigating the current tab, reducing the blank-page effect
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest('a[href*="m.me"]');
+      if (!link) return;
+
+      e.preventDefault();
+      var messengerUrl = link.getAttribute('href');
+
+      // Try window.open — opens new tab/window in FBIAB
+      var newWin = window.open(messengerUrl, '_blank', 'noopener,noreferrer');
+
+      // If popup blocked, fall back to location redirect
+      if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+        window.location.href = messengerUrl;
+      }
+    }, true); // useCapture = true so it fires before other handlers
+
+  })();
+  </script>
+
 </body>
-  </html>
+</html>
